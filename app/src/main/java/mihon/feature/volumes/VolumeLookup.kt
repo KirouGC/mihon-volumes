@@ -38,11 +38,13 @@ class VolumeLookup(
         val mangaUpdatesId: Long?,
         val mangaUpdatesTitle: String?,
         val wikipediaPage: String?,
+        val fandomPage: String?,
         val mangaUpdates: Map<String, IntRange>,
         val wikipedia: Map<String, IntRange>,
+        val fandom: Map<String, IntRange>,
     ) {
         val isEmpty: Boolean
-            get() = mangaUpdates.isEmpty() && wikipedia.isEmpty()
+            get() = mangaUpdates.isEmpty() && wikipedia.isEmpty() && fandom.isEmpty()
     }
 
     private val client get() = network.client
@@ -50,9 +52,26 @@ class VolumeLookup(
     private val headers = Headers.Builder().add("User-Agent", USER_AGENT).build()
 
     /**
-     * Looks up [query], or the MangaUpdates series [mangaUpdatesId] when the manga is already tracked there.
+     * Looks up [query], or the MangaUpdates series [mangaUpdatesId] when the manga is already tracked there. A link
+     * to a Fandom page as [query] reads only that page.
      */
     suspend fun lookup(query: String, mangaUpdatesId: Long? = null): Result = withContext(Dispatchers.IO) {
+        FandomVolumeParser.parseUrl(query)?.let { (wiki, page) ->
+            val fandom = runCatching { fandomVolumes(wiki, page) }
+                .onFailure { logcat(LogPriority.WARN, it) { "Fandom page failed" } }
+                .getOrNull()
+                .orEmpty()
+            return@withContext Result(
+                mangaUpdatesId = null,
+                mangaUpdatesTitle = null,
+                wikipediaPage = null,
+                fandomPage = query.trim().takeIf { fandom.isNotEmpty() },
+                mangaUpdates = emptyMap(),
+                wikipedia = emptyMap(),
+                fandom = fandom,
+            )
+        }
+
         val series = mangaUpdatesId?.let { it to null }
             ?: runCatching { searchMangaUpdates(query) }
                 .onFailure { logcat(LogPriority.WARN, it) { "MangaUpdates search failed" } }
@@ -67,13 +86,18 @@ class VolumeLookup(
         val wikipedia = runCatching { searchWikipedia(titles) }
             .onFailure { logcat(LogPriority.WARN, it) { "Wikipedia lookup failed" } }
             .getOrNull()
+        val fandom = runCatching { searchFandom(titles) }
+            .onFailure { logcat(LogPriority.WARN, it) { "Fandom lookup failed" } }
+            .getOrNull()
 
         Result(
             mangaUpdatesId = series?.first,
             mangaUpdatesTitle = series?.second,
             wikipediaPage = wikipedia?.first,
+            fandomPage = fandom?.first,
             mangaUpdates = VolumeMappingBuilder.fromReleases(releases),
             wikipedia = wikipedia?.second.orEmpty(),
+            fandom = fandom?.second.orEmpty(),
         )
     }
 
@@ -189,6 +213,86 @@ class VolumeLookup(
         return runCatching { getJson(url.toString())["parse"]?.jsonObject?.string("wikitext") }.getOrNull()
     }
 
+    /**
+     * The first Fandom wiki of one of [titles] with a page listing the chapters of its volumes, as the page link and
+     * the chapters of each volume. Wikis are found from their likely names and Fandom's own search.
+     */
+    private suspend fun searchFandom(titles: List<String>): Pair<String, Map<String, IntRange>>? {
+        val guessed = titles.flatMap(FandomVolumeParser::wikiNames).distinct().map { "https://$it.fandom.com" }
+        val searched = runCatching { searchFandomWikis(titles.first()) }.getOrNull().orEmpty()
+        val wikis = (guessed + searched).distinct().take(FANDOM_MAX_WIKIS)
+        for (wiki in wikis) {
+            if (!isFandomWikiOf(wiki, titles)) continue
+            for (page in fandomListPages(wiki)) {
+                val volumes = runCatching { fandomVolumes(wiki, page) }.getOrNull().orEmpty()
+                if (volumes.isNotEmpty()) return "$wiki/wiki/${page.replace(' ', '_')}" to volumes
+            }
+        }
+        return null
+    }
+
+    /**
+     * Wikis found by Fandom's search of every wiki for [query].
+     */
+    private suspend fun searchFandomWikis(query: String): List<String> {
+        val url = "$FANDOM_SEARCH_URL?query=${java.net.URLEncoder.encode(query, "UTF-8")}"
+        val html = client.newCall(GET(url, headers)).awaitSuccess().use { it.body.string() }
+        return fandomWikiLink.findAll(html)
+            .map { it.groupValues[1] }
+            .filterNot { it in FANDOM_NOT_WIKIS }
+            .distinct()
+            .take(3)
+            .map { "https://$it.fandom.com" }
+            .toList()
+    }
+
+    /**
+     * Whether [wiki] exists and is named after one of [titles], a likely name can be another series' wiki.
+     */
+    private suspend fun isFandomWikiOf(wiki: String, titles: List<String>): Boolean {
+        val siteName = runCatching {
+            getJson("$wiki/api.php?action=query&meta=siteinfo&format=json&formatversion=2")["query"]?.jsonObject
+                ?.get("general")?.jsonObject
+                ?.string("sitename")
+        }.getOrNull() ?: return false
+        val name = siteName.replace(Regex("""\bwiki\b""", RegexOption.IGNORE_CASE), " ")
+        return titles.any { VolumeMappingBuilder.similarity(name, it) >= FANDOM_MIN_SIMILARITY }
+    }
+
+    /**
+     * Pages of [wiki] that may list its chapters by volume, the usual names first then what its search finds.
+     */
+    private suspend fun fandomListPages(wiki: String): List<String> {
+        val url = "$wiki/api.php".toHttpUrl().newBuilder()
+            .addQueryParameter("action", "query")
+            .addQueryParameter("list", "search")
+            .addQueryParameter("srsearch", "list of chapters volumes")
+            .addQueryParameter("srlimit", "10")
+            .addQueryParameter("format", "json")
+            .addQueryParameter("formatversion", "2")
+            .build()
+        val searched = runCatching {
+            getJson(url.toString())["query"]?.jsonObject?.get("search")?.jsonArray.orEmpty()
+                .mapNotNull { it.jsonObject.string("title") }
+                .filter { fandomListTitle.containsMatchIn(it) }
+                .sortedByDescending { it.contains("list", ignoreCase = true) }
+        }.getOrNull().orEmpty()
+        return (FANDOM_LIST_PAGES + searched).distinct().take(FANDOM_MAX_PAGES)
+    }
+
+    private suspend fun fandomVolumes(wiki: String, page: String): Map<String, IntRange> {
+        val url = "$wiki/api.php".toHttpUrl().newBuilder()
+            .addQueryParameter("action", "parse")
+            .addQueryParameter("page", page)
+            .addQueryParameter("prop", "text")
+            .addQueryParameter("redirects", "1")
+            .addQueryParameter("format", "json")
+            .addQueryParameter("formatversion", "2")
+            .build()
+        val html = getJson(url.toString())["parse"]?.jsonObject?.string("text") ?: return emptyMap()
+        return FandomVolumeParser.parse(html)
+    }
+
     private suspend fun getJson(url: String): JsonObject {
         return client.newCall(GET(url, headers)).awaitSuccess().use { response ->
             json.parseToJsonElement(response.body.string()).jsonObject
@@ -211,6 +315,22 @@ class VolumeLookup(
         private const val MANGAUPDATES_MAX_PAGES = 10
         private const val WIKIPEDIA_MAX_PAGES = 6
         private const val MIN_SIMILARITY = 0.5
+        private const val FANDOM_SEARCH_URL = "https://community.fandom.com/wiki/Special:SearchCommunity"
+        private const val FANDOM_MAX_WIKIS = 6
+        private const val FANDOM_MAX_PAGES = 6
+        private const val FANDOM_MIN_SIMILARITY = 0.34
+        private val FANDOM_NOT_WIKIS = setOf("www", "community", "static", "auth", "services", "about", "fandom")
+        private val FANDOM_LIST_PAGES = listOf(
+            "List of Chapters and Volumes",
+            "List of chapters",
+            "List of Chapters",
+            "List of volumes",
+            "Chapters",
+            "Volumes",
+            "Manga",
+        )
+        private val fandomWikiLink = Regex("""https?://([a-z0-9-]+)\.fandom\.com""")
+        private val fandomListTitle = Regex("""chapter|volume|manga""", RegexOption.IGNORE_CASE)
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }

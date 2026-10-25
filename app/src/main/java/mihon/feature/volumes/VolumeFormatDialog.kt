@@ -135,6 +135,7 @@ private fun VolumeMapping(
         value = state.query,
         onValueChange = onQueryChange,
         label = { Text(text = stringResource(MR.strings.volumeFormat_searchAs)) },
+        supportingText = { Text(text = stringResource(MR.strings.volumeFormat_searchHint)) },
         singleLine = true,
         enabled = !state.isSearching,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -158,6 +159,7 @@ private fun VolumeMapping(
 
     val sources = listOfNotNull(
         state.wikipediaPage?.let { "Wikipedia ($it)" },
+        state.fandomPage?.let { "Fandom (${it.substringAfter("/wiki/").replace('_', ' ')})" },
         state.mangaUpdatesId?.let { "MangaUpdates" },
     )
     if (sources.isNotEmpty() && state.hasSearched) {
@@ -207,6 +209,7 @@ private fun VolumeRow(
                     text = when (source) {
                         VolumeSource.MANGAUPDATES -> "MangaUpdates"
                         VolumeSource.WIKIPEDIA -> "Wikipedia"
+                        VolumeSource.FANDOM -> "Fandom"
                         VolumeSource.MANUAL -> stringResource(MR.strings.action_edit)
                     },
                     style = MaterialTheme.typography.labelSmall,

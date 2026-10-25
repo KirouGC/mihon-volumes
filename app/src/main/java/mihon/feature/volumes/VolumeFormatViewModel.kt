@@ -94,6 +94,7 @@ class VolumeFormatViewModel(
             rows = presentVolumes.map { volume -> Row.of(volume, volumes[volume]) },
             mangaUpdatesId = mangaUpdatesId,
             wikipediaPage = mapping?.wikipediaPage,
+            fandomPage = mapping?.fandomPage,
             hasSearched = mapping != null && volumes.isNotEmpty(),
         )
     }
@@ -125,7 +126,7 @@ class VolumeFormatViewModel(
             val manual = state.value.rows.mapNotNull { row ->
                 row.toChapters()?.takeIf { it.source == VolumeSource.MANUAL }?.let { row.volume to it }
             }.toMap() + otherVolumes.filterValues { it.source == VolumeSource.MANUAL }
-            val merged = VolumeMappingBuilder.merge(manual, result.wikipedia, result.mangaUpdates)
+            val merged = VolumeMappingBuilder.merge(manual, result.wikipedia, result.mangaUpdates, result.fandom)
 
             val presentVolumes = state.value.rows.map { it.volume }.toSet()
             otherVolumes = merged.filterKeys { it !in presentVolumes }
@@ -136,6 +137,7 @@ class VolumeFormatViewModel(
                     rows = current.rows.map { row -> Row.of(row.volume, merged[row.volume]) },
                     mangaUpdatesId = result.mangaUpdatesId,
                     wikipediaPage = result.wikipediaPage,
+                    fandomPage = result.fandomPage,
                     foundNothing = result.isEmpty,
                 )
             }
@@ -165,6 +167,7 @@ class VolumeFormatViewModel(
                     query = current.query.trim().ifEmpty { null },
                     mangaUpdatesId = current.mangaUpdatesId,
                     wikipediaPage = current.wikipediaPage,
+                    fandomPage = current.fandomPage,
                     volumes = volumes.toSortedMap(compareBy { it.toDoubleOrNull() ?: Double.MAX_VALUE }),
                     updatedAt = System.currentTimeMillis(),
                 ),
@@ -181,6 +184,7 @@ class VolumeFormatViewModel(
         val rows: List<Row> = emptyList(),
         val mangaUpdatesId: Long? = null,
         val wikipediaPage: String? = null,
+        val fandomPage: String? = null,
         val isSearching: Boolean = false,
         val hasSearched: Boolean = false,
         val foundNothing: Boolean = false,

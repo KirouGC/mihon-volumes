@@ -1132,7 +1132,8 @@
     <string name="volumeFormat.volumes">Volumes</string>
     <string name="volumeFormat.volumes.summary">Each entry is a volume, trackers get the last chapter of the volume you finish</string>
     <string name="volumeFormat.searchAs">Search as</string>
-    <string name="volumeFormat.searching">Searching MangaUpdates and Wikipedia…</string>
+    <string name="volumeFormat.searchHint">A title, or the link to a Fandom page listing the chapters</string>
+    <string name="volumeFormat.searching">Searching MangaUpdates, Wikipedia and Fandom…</string>
     <string name="volumeFormat.notFound">No chapters were found for these volumes, enter them below or search with another title</string>
     <string name="volumeFormat.source">Source: %1$s</string>
     <string name="volumeFormat.volume">Vol. %1$s</string>

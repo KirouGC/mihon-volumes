@@ -18,6 +18,7 @@ enum class ContentFormat {
 enum class VolumeSource {
     MANGAUPDATES,
     WIKIPEDIA,
+    FANDOM,
     MANUAL,
 }
 
@@ -40,6 +41,7 @@ data class MangaVolumeMapping(
     val query: String? = null,
     val mangaUpdatesId: Long? = null,
     val wikipediaPage: String? = null,
+    val fandomPage: String? = null,
     val volumes: Map<String, VolumeChapters> = emptyMap(),
     val updatedAt: Long = 0,
 ) {

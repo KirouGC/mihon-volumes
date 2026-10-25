@@ -14,10 +14,10 @@ object WikipediaVolumeParser {
      */
     data class ParsedVolume(val volume: String, val chapterNumbers: List<Int>, val itemCount: Int)
 
-    private val templateStart = Regex("""\{\{\s*graphic[ _]novel[ _]list\s*(?=[|}])""", RegexOption.IGNORE_CASE)
+    private val templateStart = Regex("""\{\{\s*graphic[ _]novel[ _]list\s*(?=[|\}])""", RegexOption.IGNORE_CASE)
 
     private val listTemplateStart = Regex(
-        """\{\{\s*(?:numbered|ordered)[ _]list\s*(?=[|}])""",
+        """\{\{\s*(?:numbered|ordered)[ _]list\s*(?=[|\}])""",
         RegexOption.IGNORE_CASE,
     )
 
@@ -31,7 +31,7 @@ object WikipediaVolumeParser {
     private val comments = Regex("""<!--.*?-->""", RegexOption.DOT_MATCHES_ALL)
 
     private val anchors = Regex(
-        """\{\{\s*(?:visible anchor|vanchor|anchor)\s*\|([^|}]*)[^}]*}}""",
+        """\{\{\s*(?:visible anchor|vanchor|anchor)\s*\|([^|\}]*)[^\}]*\}\}""",
         RegexOption.IGNORE_CASE,
     )
 

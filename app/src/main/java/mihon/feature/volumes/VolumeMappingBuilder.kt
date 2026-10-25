@@ -66,7 +66,7 @@ object VolumeMappingBuilder {
      */
     fun cleanTitle(title: String): String {
         return title
-            .replace(Regex("""\([^)]*\)|\[[^]]*]|\{[^}]*}"""), " ")
+            .replace(Regex("""\([^)]*\)|\[[^\]]*\]|\{[^\}]*\}"""), " ")
             .replace(Regex("""\b(?:v|vol\.?|volume)\s*\d+(?:\s*-\s*\d+)?\b""", RegexOption.IGNORE_CASE), " ")
             .replace('_', ' ')
             .replace(Regex("""\s+"""), " ")

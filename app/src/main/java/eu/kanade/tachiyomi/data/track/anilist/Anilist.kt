@@ -164,7 +164,9 @@ class Anilist(id: Long) : BaseTracker(id, "AniList"), DeletableTracker {
             }
         }
 
-        return api.updateLibManga(track)
+        val progressVolumes = appGraph.volumeProgressResolver.mappingOf(track.manga_id)
+            ?.volumesReadAt(track.last_chapter_read)
+        return api.updateLibManga(track, progressVolumes)
     }
 
     override suspend fun delete(track: DomainTrack) {

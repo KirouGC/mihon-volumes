@@ -45,6 +45,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import mihon.core.metro.IsDebugBuild
 import mihon.domain.extension.interactor.GetExtensionStoreCountAsFlow
 import mihon.domain.extension.repository.ExtensionStoreRepository
+import mihon.feature.volumes.VolumeProgressResolver
 import nl.adaptivity.xmlutil.serialization.XML
 import tachiyomi.domain.backup.service.BackupPreferences
 import tachiyomi.domain.category.interactor.GetCategories
@@ -122,6 +123,7 @@ interface AppGraph : ViewModelGraph {
     val resetCategoryFlags: ResetCategoryFlags
     val addTracks: AddTracks
     val upsertTrack: UpsertTrack
+    val volumeProgressResolver: VolumeProgressResolver
 
     val getExtensionStoreCountAsFlow: GetExtensionStoreCountAsFlow
 

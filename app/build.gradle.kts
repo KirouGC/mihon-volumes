@@ -35,7 +35,8 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.mihon"
+        // Its own id so that the fork installs next to the official Mihon
+        applicationId = "app.mihon.volumes"
 
         versionCode = 38
         versionName = "0.21.2"

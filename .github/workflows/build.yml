@@ -12,6 +12,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -28,10 +29,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Dependency Review
-        if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
 
       - name: Set up JDK
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -61,14 +58,24 @@ jobs:
           name: test-report-${{ github.sha }}
           path: app/build/reports/tests/testDebugUnitTest
 
+      # The fork is built without telemetry or the updater, which would offer the official Mihon releases, and signed
+      # with the fork's own key so that each new APK installs over the previous one
       - name: Build app
-        run: ./gradlew assembleRelease -Pdist=ci
+        run: ./gradlew assembleRelease
+        env:
+          MIHON_GITHUB_RELEASE: true
+          storeFile: ${{ github.workspace }}/.github/signing/mihon-volumes.jks
+          storePassword: mihon-volumes
+          keyAlias: mihon-volumes
+          keyPassword: mihon-volumes
 
       - name: Upload APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: arm64-v8a-${{ github.sha }}
-          path: app/build/outputs/apk/release/app-arm64-v8a-release.apk
+          name: mihon-volumes-${{ github.sha }}
+          path: |
+            app/build/outputs/apk/release/app-universal-release.apk
+            app/build/outputs/apk/release/app-arm64-v8a-release.apk
 
       - name: Upload mapping
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

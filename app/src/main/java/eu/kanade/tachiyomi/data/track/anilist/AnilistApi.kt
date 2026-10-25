@@ -72,7 +72,10 @@ class AnilistApi(
             ?: throw Exception("Failed to add manga")
     }
 
-    suspend fun updateLibManga(track: Track): Track {
+    /**
+     * Updates [track] on AniList, with [progressVolumes] the volumes read when the manga is read in volumes.
+     */
+    suspend fun updateLibManga(track: Track, progressVolumes: Int? = null): Track {
         val libraryId = track.library_id
         requireNotNull(libraryId) { "AniList cannot update track with null library_id" }
 
@@ -81,6 +84,7 @@ class AnilistApi(
                 AniListUpdateMangaMutation(
                     library_id = libraryId.toInt(),
                     progress = track.last_chapter_read.toInt(),
+                    progressVolumes = Optional.presentIfNotNull(progressVolumes),
                     status = track.toApiStatus(),
                     private = track.private,
                     score = track.score.toInt(),

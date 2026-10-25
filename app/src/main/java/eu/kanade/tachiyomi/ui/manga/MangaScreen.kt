@@ -58,6 +58,7 @@ import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.feature.migration.config.MigrationConfigScreen
 import mihon.feature.migration.dialog.MigrateMangaDialog
+import mihon.feature.volumes.VolumeFormatDialog
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
@@ -84,6 +85,7 @@ class MangaScreen(
             }
 
         val state by viewModel.state.collectAsStateWithLifecycle()
+        val isVolumeFormat by viewModel.isVolumeFormat.collectAsStateWithLifecycle()
 
         if (state is MangaViewModel.State.Loading) {
             LoadingScreen()
@@ -161,6 +163,8 @@ class MangaScreen(
                 navigator.push(MigrationConfigScreen(successState.manga.id))
             }.takeIf { successState.manga.favorite },
             onEditNotesClicked = { navigator.push(MangaNotesScreen(manga = successState.manga)) },
+            isVolumeFormat = isVolumeFormat,
+            onVolumeFormatClicked = viewModel::showVolumeFormatDialog,
             onMultiBookmarkClicked = viewModel::bookmarkChapters,
             onMultiMarkAsReadClicked = viewModel::markChaptersRead,
             onMarkPreviousAsReadClicked = viewModel::markPreviousChapterRead,
@@ -277,6 +281,12 @@ class MangaScreen(
                 } else {
                     LoadingScreen(Modifier.systemBarsPadding())
                 }
+            }
+            MangaViewModel.Dialog.VolumeFormat -> {
+                VolumeFormatDialog(
+                    mangaId = successState.manga.id,
+                    onDismissRequest = onDismissRequest,
+                )
             }
             is MangaViewModel.Dialog.SetFetchInterval -> {
                 SetIntervalDialog(

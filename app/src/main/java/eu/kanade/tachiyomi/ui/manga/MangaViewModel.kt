@@ -75,6 +75,11 @@ import logcat.LogPriority
 import mihon.core.metro.AppCoroutineScope
 import mihon.domain.chapter.interactor.FilterChaptersForDownload
 import mihon.domain.source.interactor.UpdateMangaFromRemote
+import mihon.feature.volumes.ContentFormat
+import mihon.feature.volumes.VolumeMappingStore
+import mihon.feature.volumes.VolumeProgressResolver
+import mihon.feature.volumes.formatVolume
+import mihon.feature.volumes.mappingKey
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
@@ -139,6 +144,8 @@ class MangaViewModel(
     private val sourceManager: SourceManager,
     private val refreshTracks: RefreshTracks,
     private val coverCache: CoverCache,
+    private val volumeProgressResolver: VolumeProgressResolver,
+    volumeMappingStore: VolumeMappingStore,
 ) : ViewModel() {
 
     private val subscriberGate = SubscriberGate()
@@ -786,7 +793,15 @@ class MangaViewModel(
             refreshTrackers()
 
             val tracks = getTracks.await(mangaId)
-            val maxChapterNumber = chapters.maxOf { it.chapterNumber }
+            val maxChapterNumber = when (
+                val progress = volumeProgressResolver.resolve(mangaId, chapters.maxOf { it.chapterNumber })
+            ) {
+                is VolumeProgressResolver.Progress.Chapter -> progress.chapterNumber
+                is VolumeProgressResolver.Progress.UnmappedVolume -> {
+                    context.toast(context.stringResource(MR.strings.volume_unmapped, formatVolume(progress.volume)))
+                    return@launch
+                }
+            }
             val shouldPromptTrackingUpdate = tracks.any { track -> maxChapterNumber > track.lastChapterRead }
 
             if (!shouldPromptTrackingUpdate) return@launch
@@ -1058,6 +1073,21 @@ class MangaViewModel(
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog
         data object FullCover : Dialog
+        data object VolumeFormat : Dialog
+    }
+
+    /**
+     * Whether the entries of this manga are read as volumes, see [VolumeMappingStore].
+     */
+    val isVolumeFormat: StateFlow<Boolean> = combine(state, volumeMappingStore.changes) { current, mappings ->
+        val manga = (current as? State.Success)?.manga ?: return@combine false
+        mappings.mangas[mappingKey(manga.source, manga.url)]?.format == ContentFormat.VOLUMES
+    }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun showVolumeFormatDialog() {
+        dialog.value = Dialog.VolumeFormat
     }
 
     fun dismissDialog() {

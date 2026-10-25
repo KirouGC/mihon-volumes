@@ -17,6 +17,7 @@ import eu.kanade.presentation.components.AppBarTitle
 import eu.kanade.presentation.components.DownloadDropdownMenu
 import eu.kanade.presentation.manga.DownloadAction
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Book
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
@@ -37,6 +38,8 @@ fun MangaToolbar(
     onClickRefresh: () -> Unit,
     onClickMigrate: (() -> Unit)?,
     onClickEditNotes: () -> Unit,
+    isVolumeFormat: Boolean,
+    onClickVolumeFormat: () -> Unit,
 
     // For action mode
     actionModeCounter: Int,
@@ -93,6 +96,14 @@ fun MangaToolbar(
                         )
                         return@buildList
                     }
+                    add(
+                        AppBar.Action(
+                            title = stringResource(MR.strings.volumeFormat_title),
+                            icon = MaterialSymbols.Rounded.Book,
+                            iconTint = if (isVolumeFormat) MaterialTheme.colorScheme.active else null,
+                            onClick = onClickVolumeFormat,
+                        ),
+                    )
                     if (onClickDownload != null) {
                         add(
                             AppBar.Action(

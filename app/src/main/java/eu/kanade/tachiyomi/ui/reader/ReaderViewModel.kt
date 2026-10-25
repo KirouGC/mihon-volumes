@@ -55,6 +55,7 @@ import eu.kanade.tachiyomi.util.lang.byteSize
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.cacheImageDir
 import eu.kanade.tachiyomi.util.system.activeNetworkState
+import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +79,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import mihon.core.metro.AppCoroutineScope
+import mihon.feature.volumes.VolumeProgressResolver
+import mihon.feature.volumes.formatVolume
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.preference.toggle
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
@@ -93,6 +97,7 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.source.service.SourceManager
+import tachiyomi.i18n.MR
 import tachiyomi.source.local.image.LocalCoverManager
 import tachiyomi.source.local.isLocal
 import kotlin.time.Clock
@@ -129,6 +134,7 @@ class ReaderViewModel(
     private val coverCache: CoverCache,
     private val chapterCache: ChapterCache,
     private val downloadCache: DownloadCache,
+    private val volumeProgressResolver: VolumeProgressResolver,
 ) : ViewModel() {
 
     @AssistedFactory
@@ -1076,7 +1082,15 @@ class ReaderViewModel(
 
         // Reading the last page and leaving right away is common, so it outlives the reader
         appScope.launch {
-            trackChapter.await(context, manga.id, readerChapter.chapter.chapterNumber)
+            val progress = volumeProgressResolver.resolve(manga.id, readerChapter.chapter.chapterNumber)
+            when (progress) {
+                is VolumeProgressResolver.Progress.Chapter -> {
+                    trackChapter.await(context, manga.id, progress.chapterNumber)
+                }
+                is VolumeProgressResolver.Progress.UnmappedVolume -> withContext(Dispatchers.Main) {
+                    context.toast(context.stringResource(MR.strings.volume_unmapped, formatVolume(progress.volume)))
+                }
+            }
         }
     }
 

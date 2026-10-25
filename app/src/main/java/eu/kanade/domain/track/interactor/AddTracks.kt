@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.source.Source
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
+import mihon.feature.volumes.VolumeProgressResolver
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.history.interactor.GetHistory
@@ -25,6 +26,7 @@ class AddTracks(
     private val getChaptersByMangaId: GetChaptersByMangaId,
     private val trackerManager: TrackerManager,
     private val getHistory: GetHistory,
+    private val volumeProgressResolver: VolumeProgressResolver,
 ) {
 
     // TODO: update all trackers based on common data
@@ -44,7 +46,10 @@ class AddTracks(
                 .sortedBy { it.chapterNumber }
                 .takeWhile { it.read }
                 .lastOrNull()
-                ?.chapterNumber ?: -1.0
+                ?.chapterNumber
+                ?.let { volumeProgressResolver.resolve(mangaId, it) as? VolumeProgressResolver.Progress.Chapter }
+                ?.chapterNumber
+                ?: -1.0
 
             if (latestLocalReadChapterNumber > track.lastChapterRead) {
                 track = track.copy(

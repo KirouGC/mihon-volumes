@@ -1,6 +1,7 @@
 mutation AniListUpdateManga(
   $library_id: Int!,
   $progress: Int!,
+  $progressVolumes: Int,
   $status: MediaListStatus!,
   $private: Boolean!,
   $score: Int!,
@@ -10,6 +11,7 @@ mutation AniListUpdateManga(
   SaveMediaListEntry(
     id: $library_id,
     progress: $progress,
+    progressVolumes: $progressVolumes,
     status: $status,
     private: $private,
     scoreRaw: $score,

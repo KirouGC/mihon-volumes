@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Mihon</string>
+    <string name="app_name" translatable="false">Mihon Volumes</string>
 
     <!-- Generic strings -->
     <string name="on">On</string>
@@ -1124,4 +1124,20 @@
     <string name="donationCampaign.paragraph3">Regardless, Mihon will continue to be maintained by me and the volunteers, and it will stay open source.</string>
     <string name="donationCampaign.contactPlatform">Discord</string>
     <string name="donationCampaign.dismiss">Dismiss</string>
+
+    <!-- Volume format -->
+    <string name="volumeFormat.title">Content format</string>
+    <string name="volumeFormat.chapters">Chapters</string>
+    <string name="volumeFormat.chapters.summary">Each entry is a chapter, trackers get its number as usual</string>
+    <string name="volumeFormat.volumes">Volumes</string>
+    <string name="volumeFormat.volumes.summary">Each entry is a volume, trackers get the last chapter of the volume you finish</string>
+    <string name="volumeFormat.searchAs">Search as</string>
+    <string name="volumeFormat.searching">Searching MangaUpdates and Wikipedia…</string>
+    <string name="volumeFormat.notFound">No chapters were found for these volumes, enter them below or search with another title</string>
+    <string name="volumeFormat.source">Source: %1$s</string>
+    <string name="volumeFormat.volume">Vol. %1$s</string>
+    <string name="volumeFormat.from">From</string>
+    <string name="volumeFormat.to">To</string>
+    <string name="volumeFormat.missing">Volumes without chapters: %1$s</string>
+    <string name="volume_unmapped">Vol. %1$s has no chapters yet, trackers weren\'t updated</string>
 </resources>
